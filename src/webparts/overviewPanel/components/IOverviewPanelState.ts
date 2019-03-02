@@ -5,4 +5,13 @@ export interface IOverviewPanelState {
   newReactorName: string;
   waitMessage: string;
   isDeleting: boolean;
+  tempData: ITempData;
+  totalWatt: number;
+}
+
+
+export interface ITempData {
+  messageId: string;
+  temperature: number;
+  humidity: number;
 }

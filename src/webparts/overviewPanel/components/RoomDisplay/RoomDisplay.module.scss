@@ -74,17 +74,3 @@
 .createButton {
   margin-left: 10px;
 }
-
-.overviewData {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  padding-left: 0px;
-  > li {
-    list-style-type: none;
-    display: flex;
-    > i {
-      margin: 3px 5px 0 0;
-    }
-  }
-}

@@ -22,18 +22,23 @@ export default class OverviewPanel extends React.Component<IOverviewPanelProps, 
             newReactorName: '',
             waitMessage: '',
             isDeleting: false,
+            tempData: undefined,
+            totalWatt: undefined
         };
     }
 
     public componentDidMount() {
         this.getReactors();
+        this.getLatestTempData();
+        this.getWattData();
     }
 
     public render(): React.ReactElement<IOverviewPanelProps> {
         if (!this.state) { return <div />; }
         return (
             <div className={styles.overviewPanel}>
-                {this.state.isDeleting && this.displayDeleteMessage()}
+                {this.state.tempData && this.renderTempData()}
+                {this.displayDeleteMessage()}
                 {this.state.reactors && this.renderReactors(this.state.reactors)}
                 {this.renderCreateNewButton()}
                 {this.renderDialog()}
@@ -80,6 +85,8 @@ export default class OverviewPanel extends React.Component<IOverviewPanelProps, 
           modalIsShowing: false
         });
         this.getReactors();
+        this.getLatestTempData();
+        this.getWattData();
     }
 
     private async deleteReactor(reactor) {
@@ -99,6 +106,8 @@ export default class OverviewPanel extends React.Component<IOverviewPanelProps, 
         isDeleting: false
       });
       this.getReactors();
+      this.getLatestTempData();
+      this.getWattData();
     }
 
     private async getTemperature(coreUrl) {
@@ -121,7 +130,6 @@ export default class OverviewPanel extends React.Component<IOverviewPanelProps, 
     }
 
     private updateWaitMessage() {
-      console.log(this.state.waitMessage);
       const messages = ['Calling the russians', 'Travelling to China', 'Folding thumbs', 'Overthrowing the Iranian Government', 'Choking bart', 'Burning trashcans', 'Buying Uranium' ];
       let rand = messages[Math.floor(Math.random() * messages.length)];
       this.setState({
@@ -146,6 +154,7 @@ export default class OverviewPanel extends React.Component<IOverviewPanelProps, 
                   <p>Last update</p>
                   <p>{format(newDate, 'HH:mm:ss')}</p>
                 </div>
+                {this.state.tempData && <div className={styles.timeRow}><Icon iconName="LightningBolt" /><p>Power output</p><p>{Math.round((reactor.temperature*10) + (this.state.tempData.humidity*10) + (this.state.tempData.temperature*10))/1000} MW</p></div>}
                 <PrimaryButton className={styles.deleteButton} onClick={() =>this.deleteReactor(reactor)}>Delete reactor</PrimaryButton>
             </div>
         );
@@ -190,12 +199,18 @@ export default class OverviewPanel extends React.Component<IOverviewPanelProps, 
         </div>
       );
     }
+
     private displayDeleteMessage() {
       return (
-        <div style={{display: 'flex', marginLeft: '10'}}>
-          <Label className={styles.deleteText}>Deleting Reactor core, please wait</Label>
-          <Spinner className={styles.spinner} size={SpinnerSize.large}/>
-        </div>
+        <Dialog
+          hidden={!this.state.isDeleting}
+          dialogContentProps={{
+            type: DialogType.largeHeader,
+            title: 'Deconstructing reactor',
+            subText: 'Please wait ...'
+          }}>
+            <Spinner className={styles.spinner} size={SpinnerSize.large}/>
+          </Dialog>
       );
     }
 
@@ -211,5 +226,48 @@ export default class OverviewPanel extends React.Component<IOverviewPanelProps, 
           Create new reactor
         </CompoundButton>
     );
+    }
+
+    private async getLatestTempData() {
+      const url = 'https://iotapi20190302105804.azurewebsites.net/api/message/latest';
+
+      console.log(this.state.tempData);
+      let data = await fetch(url);
+      let json = await data.json();
+      let newData;
+      if(!this.state.tempData) {
+        newData = json;
+      } else {
+        newData = {
+          messageId: json.messageId ? json.messageId : this.state.tempData.messageId,
+          temperature: json.temperature ? json.temperature : this.state.tempData.temperature,
+          humidity: json.humidity ? json.humidity : this.state.tempData.humidity,
+        };
+      }
+      this.setState({
+        tempData: newData,
+      });
+      window.setTimeout(() => this.getLatestTempData(), 2000);
+    }
+
+    private renderTempData() {
+      console.log("HEllo");
+      return (
+        <ul className={styles.overviewData}>
+          <li><Icon iconName="Frigid"/>Reactorroom temperature: {Math.round(this.state.tempData.temperature*100)/100}</li>
+          <li><Icon iconName="Fog"/>Reactorroom humidity: {Math.round(this.state.tempData.humidity*100)/100}</li>
+          {this.state.totalWatt && <li><Icon iconName="LightningBolt" />Power output: {Math.round(this.state.totalWatt)/1000} MW</li>}
+        </ul>
+      );
+    }
+
+    private async getWattData() {
+      const url = 'https://reactorapi20190302034437.azurewebsites.net/api/CanServerLive?code=41b/36amxQJFkHR94dhMTyyM7A46vxOgu6Bw4yigAyojYucsH3P4Lw==';
+      let data = await fetch(url);
+      let json = await data.json();
+      this.setState({
+        totalWatt: json.watt
+      });
+      window.setTimeout(() => this.getWattData(), 2000);
     }
 }
